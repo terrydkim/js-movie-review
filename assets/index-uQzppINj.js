@@ -60,36 +60,6 @@ const fetchPopularMovies = async (page = 1, retries = 0) => {
     throw Error(`최대 재시도 횟수를 초과했습니다. ${error.message}`);
   }
 };
-const DEFAULT_MOVIE_RENDER_COUNT = 20;
-const SkeletonItems = (count = 4) => {
-  return Array.from(
-    { length: count },
-    () => `
-      <li class="skeleton-list">
-          <div class="skeleton-item">
-              <img class="skeleton-thumbnail" />
-              <div class="skeleton-item-desc">
-                  <p class="skeleton-rate">
-                      <img class="skeleton-star" />
-                      <span class="skeleton-rate-value"></span>
-                  </p>
-                  <div class="skeleton-title"></div>
-              </div>
-          </div>
-      </li>
-    `
-  ).join("");
-};
-const addSkeleton = () => {
-  const movieSection = document.querySelector(".thumbnail-list");
-  movieSection.insertAdjacentHTML("beforeend", SkeletonItems());
-};
-const removeSkeleton = () => {
-  const skeletonLists = document.querySelectorAll(".skeleton-list");
-  skeletonLists.forEach((skeletonList) => {
-    skeletonList.remove();
-  });
-};
 const Headers = (movie) => {
   const { title, backdrop_path, vote_average } = movie;
   const backdrop = `https://image.tmdb.org/t/p/w1920_and_h800_multi_faces${backdrop_path}`;
@@ -115,6 +85,10 @@ const Headers = (movie) => {
     </div>
   </header>`
   );
+};
+const insertMovieHeaders = (movie) => {
+  const wrap = document.querySelector("#wrap");
+  wrap.insertAdjacentHTML("afterbegin", Headers(movie));
 };
 const LoadMoreButton = (isVisible) => {
   if (!isVisible) return "";
@@ -151,6 +125,9 @@ const MovieItem = (props) => {
     </li>`
   );
 };
+const renderMovieItems = (movies) => {
+  return movies.map((movie) => MovieItem(movie)).join("");
+};
 const MovieList = (props) => {
   const { movies } = props;
   return (
@@ -163,24 +140,40 @@ const MovieList = (props) => {
     `
   );
 };
-const renderHeaders = (movie) => {
-  const wrap = document.querySelector("#wrap");
-  wrap.insertAdjacentHTML("afterbegin", Headers(movie));
-};
-const renderMovieSection = (movies) => {
-  const movieSection = document.querySelector(".movie-section");
-  movieSection.innerHTML = MovieList({ movies });
-  const initHasMoreMovies = movies.length === DEFAULT_MOVIE_RENDER_COUNT;
-  const loadMoreButtonHTML = LoadMoreButton(initHasMoreMovies);
-  movieSection.insertAdjacentHTML("beforeend", loadMoreButtonHTML);
-};
-const renderMovieItems = (movies) => {
-  return movies.map((movie) => MovieItem(movie)).join("");
-};
-const appendMovieItems = (movies) => {
+const insertMovieItems = (movies) => {
   const movieSection = document.querySelector(".thumbnail-list");
   movieSection.insertAdjacentHTML("beforeend", renderMovieItems(movies));
 };
+const SkeletonItems = (count = 5) => {
+  return Array.from(
+    { length: count },
+    () => `
+      <li class="skeleton-list">
+          <div class="skeleton-item">
+              <img class="skeleton-thumbnail" />
+              <div class="skeleton-item-desc">
+                  <p class="skeleton-rate">
+                      <img class="skeleton-star" />
+                      <span class="skeleton-rate-value"></span>
+                  </p>
+                  <div class="skeleton-title"></div>
+              </div>
+          </div>
+      </li>
+    `
+  ).join("");
+};
+const addSkeleton = () => {
+  const movieSection = document.querySelector(".thumbnail-list");
+  movieSection.insertAdjacentHTML("beforeend", SkeletonItems());
+};
+const removeSkeleton = () => {
+  const skeletonLists = document.querySelectorAll(".skeleton-list");
+  skeletonLists.forEach((skeletonList) => {
+    skeletonList.remove();
+  });
+};
+const DEFAULT_MOVIE_RENDER_COUNT = 20;
 let currentPage = 1;
 let allMovies = [];
 let hasMoreMovies = true;
@@ -191,7 +184,7 @@ const initializeMovieSection = async () => {
   if (allMovies.length === 0) {
     throw Error("영화 정보가 로드되지 않았습니다.");
   }
-  renderHeaders(allMovies[0]);
+  insertMovieHeaders(allMovies[0]);
   renderMovieSection(allMovies);
   addLoadMoreButtonEvent();
 };
@@ -201,7 +194,7 @@ const loadMoreMovies = async () => {
   const newMovies = await fetchPopularMovies(currentPage + 1);
   allMovies = [...allMovies, ...newMovies.results];
   currentPage++;
-  appendMovieItems(newMovies.results);
+  insertMovieItems(newMovies.results);
   removeSkeleton();
   updateLoadMoreButtonDisplay(newMovies.results.length);
 };
@@ -218,6 +211,13 @@ const updateLoadMoreButtonDisplay = (loadedMovieCount, currentPage2) => {
     }
     return;
   }
+};
+const renderMovieSection = (movies) => {
+  const movieSection = document.querySelector(".movie-section");
+  movieSection.innerHTML = MovieList({ movies });
+  const initHasMoreMovies = movies.length === DEFAULT_MOVIE_RENDER_COUNT;
+  const loadMoreButtonHTML = LoadMoreButton(initHasMoreMovies);
+  movieSection.insertAdjacentHTML("beforeend", loadMoreButtonHTML);
 };
 addEventListener("load", async () => {
   await initializeMovieSection();
